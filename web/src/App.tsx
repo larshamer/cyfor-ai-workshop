@@ -12,14 +12,16 @@ export default function App() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [search, setSearch] = useState("");
   const [editingResourceId, setEditingResourceId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const queryClient = useQueryClient();
   const refreshItems = () =>
-    queryClient.invalidateQueries({ queryKey: getGetItemsQueryKey() });
-  const itemsQuery = useGetItems();
+    queryClient.invalidateQueries({ queryKey: [getGetItemsQueryKey()[0]] });
+  const trimmedSearch = search.trim();
+  const itemsQuery = useGetItems(trimmedSearch ? { q: trimmedSearch } : undefined);
   const createItemMutation = usePostItems({
     mutation: {
       onSuccess: async () => {
@@ -242,7 +244,16 @@ export default function App() {
         ) : null}
 
         <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-medium text-slate-700">Resources</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-sm font-medium text-slate-700">Resources</h2>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search resources"
+              maxLength={120}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 sm:max-w-xs"
+            />
+          </div>
 
           {itemsQuery.isPending ? <p className="mt-3 text-sm text-slate-600">Loading resources...</p> : null}
 
@@ -290,7 +301,9 @@ export default function App() {
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-slate-600">No resources yet.</p>
+              <p className="mt-3 text-sm text-slate-600">
+                {trimmedSearch ? "No resources match that search." : "No resources yet."}
+              </p>
             )
           ) : null}
         </section>
