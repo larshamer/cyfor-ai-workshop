@@ -10,5 +10,7 @@ datasource db {
 model Item {
   id        Int      @id @default(autoincrement())
   title     String
+  description String   @default("No description provided yet.")
+  category  String     @default("General")
   createdAt DateTime @default(now())
 }

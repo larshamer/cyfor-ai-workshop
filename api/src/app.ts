@@ -14,6 +14,8 @@ const HealthResponseSchema = z.object({
 const ItemSchema = z.object({
   id: z.number().int().openapi({ example: 1 }),
   title: z.string().min(1).max(120).openapi({ example: 'Build a workshop API' }),
+  description: z.string().min(1).max(500).openapi({ example: 'Internal API used to manage workshop resources.' }),
+  category: z.string().min(1).max(60).openapi({ example: 'Software' }),
   createdAt: z.string().datetime().openapi({ example: '2024-01-01T00:00:00.000Z' })
 }).openapi('Item')
 
@@ -22,8 +24,12 @@ const ItemListResponseSchema = z.object({
 }).openapi('ItemListResponse')
 
 const CreateItemSchema = z.object({
-  title: z.string().trim().min(1).max(120).openapi({ example: 'Build a workshop API' })
+  title: z.string().trim().min(1).max(120).openapi({ example: 'Build a workshop API' }),
+  description: z.string().trim().min(1).max(500).openapi({ example: 'Internal API used to manage workshop resources.' }),
+  category: z.string().trim().min(1).max(60).openapi({ example: 'Software' })
 }).openapi('CreateItem')
+
+const UpdateItemSchema = CreateItemSchema.openapi('UpdateItem')
 
 const ItemParamsSchema = z.object({
   id: z.coerce.number().int().positive().openapi({
@@ -123,9 +129,41 @@ const deleteItemRoute = createRoute({
   }
 })
 
-const toItemResponse = (item: { id: number; title: string; createdAt: Date }) => ({
+const updateItemRoute = createRoute({
+  method: 'put',
+  path: '/items/{id}',
+  tags: ['Items'],
+  request: {
+    params: ItemParamsSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: UpdateItemSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Update a persisted item',
+      content: {
+        'application/json': {
+          schema: ItemSchema
+        }
+      }
+    },
+    404: {
+      description: 'Item not found'
+    }
+  }
+})
+
+const toItemResponse = (item: { id: number; title: string; description: string; category: string; createdAt: Date }) => ({
   id: item.id,
   title: item.title,
+  description: item.description,
+  category: item.category,
   createdAt: item.createdAt.toISOString()
 })
 
@@ -178,14 +216,44 @@ app.openapi(listItemsRoute, async (c) => {
 })
 
 app.openapi(createItemRoute, async (c) => {
-  const { title } = c.req.valid('json')
+  const { title, description, category } = c.req.valid('json')
   const item = await prisma.item.create({
     data: {
-      title
+      title,
+      description,
+      category
     }
   })
 
   return c.json(toItemResponse(item), 201)
+})
+
+app.openapi(updateItemRoute, async (c) => {
+  const { id } = c.req.valid('param')
+  const { title, description, category } = c.req.valid('json')
+
+  const existingItem = await prisma.item.findUnique({
+    where: {
+      id
+    }
+  })
+
+  if (!existingItem) {
+    return c.body(null, 404)
+  }
+
+  const item = await prisma.item.update({
+    where: {
+      id
+    },
+    data: {
+      title,
+      description,
+      category
+    }
+  })
+
+  return c.json(toItemResponse(item), 200)
 })
 
 app.openapi(deleteItemRoute, async (c) => {
