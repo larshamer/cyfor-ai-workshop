@@ -49,6 +49,18 @@
             "maxLength": 120,
             "example": "Build a workshop API"
           },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "example": "Internal API used to manage workshop resources."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60,
+            "example": "Software"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -58,6 +70,8 @@
         "required": [
           "id",
           "title",
+          "description",
+          "category",
           "createdAt"
         ]
       },
@@ -83,10 +97,52 @@
             "minLength": 1,
             "maxLength": 120,
             "example": "Build a workshop API"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "example": "Internal API used to manage workshop resources."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60,
+            "example": "Software"
           }
         },
         "required": [
-          "title"
+          "title",
+          "description",
+          "category"
+        ]
+      },
+      "UpdateItem": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Build a workshop API"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "example": "Internal API used to manage workshop resources."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60,
+            "example": "Software"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "category"
         ]
       }
     },
@@ -178,6 +234,49 @@
       }
     },
     "/items/{id}": {
+      "put": {
+        "tags": [
+          "Items"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "example": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateItem"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Update a persisted item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found"
+          }
+        }
+      },
       "delete": {
         "tags": [
           "Items"
