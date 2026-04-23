@@ -117,6 +117,117 @@
           "category"
         ]
       },
+      "BookingStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "confirmed",
+          "cancelled",
+          "completed"
+        ]
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "resourceId": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "example": 1
+          },
+          "status": {
+            "$ref": "#/components/schemas/BookingStatus"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-23T09:00:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-23T10:00:00.000Z"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-22T16:45:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "resourceId",
+          "status",
+          "startsAt",
+          "endsAt",
+          "createdAt"
+        ]
+      },
+      "BookingListResponse": {
+        "type": "object",
+        "properties": {
+          "bookings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Booking"
+            }
+          }
+        },
+        "required": [
+          "bookings"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "CreateBooking": {
+        "type": "object",
+        "properties": {
+          "resourceId": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "example": 1
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingStatus"
+              },
+              {
+                "example": "confirmed"
+              }
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-23T09:00:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-04-23T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "resourceId",
+          "startsAt",
+          "endsAt"
+        ]
+      },
       "UpdateItem": {
         "type": "object",
         "properties": {
@@ -246,6 +357,82 @@
         }
       }
     },
+    "/bookings": {
+      "get": {
+        "tags": [
+          "Bookings"
+        ],
+        "responses": {
+          "200": {
+            "description": "List persisted bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Bookings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBooking"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Create a persisted booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid booking time range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Booking conflicts with an existing confirmed booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/items/{id}": {
       "put": {
         "tags": [
@@ -310,6 +497,48 @@
         "responses": {
           "204": {
             "description": "Remove a persisted item"
+          }
+        }
+      }
+    },
+    "/bookings/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "example": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancel an existing booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Booking not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }

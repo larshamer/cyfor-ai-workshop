@@ -8,9 +8,22 @@ datasource db {
 }
 
 model Item {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String    @default("No description provided yet.")
+  category    String    @default("General")
+  createdAt   DateTime  @default(now())
+  bookings    Booking[]
+}
+
+model Booking {
   id        Int      @id @default(autoincrement())
-  title     String
-  description String   @default("No description provided yet.")
-  category  String     @default("General")
+  resourceId Int
+  resource  Item     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  status    String   @default("confirmed")
+  startsAt  DateTime
+  endsAt    DateTime
   createdAt DateTime @default(now())
+
+  @@index([resourceId, startsAt, endsAt])
 }

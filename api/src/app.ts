@@ -51,6 +51,46 @@ const ItemParamsSchema = z.object({
   })
 }).openapi('ItemParams')
 
+const bookingStatusValues = ['draft', 'confirmed', 'cancelled', 'completed'] as const
+
+type BookingStatus = (typeof bookingStatusValues)[number]
+
+const BookingStatusSchema = z.enum(bookingStatusValues).openapi('BookingStatus')
+
+const BookingSchema = z.object({
+  id: z.number().int().openapi({ example: 1 }),
+  resourceId: z.number().int().positive().openapi({ example: 1 }),
+  status: BookingStatusSchema,
+  startsAt: z.string().datetime().openapi({ example: '2026-04-23T09:00:00.000Z' }),
+  endsAt: z.string().datetime().openapi({ example: '2026-04-23T10:00:00.000Z' }),
+  createdAt: z.string().datetime().openapi({ example: '2026-04-22T16:45:00.000Z' })
+}).openapi('Booking')
+
+const BookingListResponseSchema = z.object({
+  bookings: z.array(BookingSchema)
+}).openapi('BookingListResponse')
+
+const ErrorResponseSchema = z.object({
+  message: z.string()
+}).openapi('ErrorResponse')
+
+const CreateBookingSchema = z.object({
+  resourceId: z.number().int().positive().openapi({ example: 1 }),
+  status: BookingStatusSchema.optional().openapi({ example: 'confirmed' }),
+  startsAt: z.string().datetime().openapi({ example: '2026-04-23T09:00:00.000Z' }),
+  endsAt: z.string().datetime().openapi({ example: '2026-04-23T10:00:00.000Z' })
+}).openapi('CreateBooking')
+
+const BookingParamsSchema = z.object({
+  id: z.coerce.number().int().positive().openapi({
+    param: {
+      name: 'id',
+      in: 'path'
+    },
+    example: 1
+  })
+}).openapi('BookingParams')
+
 const rootRoute = createRoute({
   method: 'get',
   path: '/',
@@ -172,12 +212,114 @@ const updateItemRoute = createRoute({
   }
 })
 
+const listBookingsRoute = createRoute({
+  method: 'get',
+  path: '/bookings',
+  tags: ['Bookings'],
+  responses: {
+    200: {
+      description: 'List persisted bookings',
+      content: {
+        'application/json': {
+          schema: BookingListResponseSchema
+        }
+      }
+    }
+  }
+})
+
+const createBookingRoute = createRoute({
+  method: 'post',
+  path: '/bookings',
+  tags: ['Bookings'],
+  request: {
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: CreateBookingSchema
+        }
+      }
+    }
+  },
+  responses: {
+    201: {
+      description: 'Create a persisted booking',
+      content: {
+        'application/json': {
+          schema: BookingSchema
+        }
+      }
+    },
+    400: {
+      description: 'Invalid booking time range',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Resource not found',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema
+        }
+      }
+    },
+    409: {
+      description: 'Booking conflicts with an existing confirmed booking',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+const cancelBookingRoute = createRoute({
+  method: 'post',
+  path: '/bookings/{id}/cancel',
+  tags: ['Bookings'],
+  request: {
+    params: BookingParamsSchema
+  },
+  responses: {
+    200: {
+      description: 'Cancel an existing booking',
+      content: {
+        'application/json': {
+          schema: BookingSchema
+        }
+      }
+    },
+    404: {
+      description: 'Booking not found',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
 const toItemResponse = (item: { id: number; title: string; description: string; category: string; createdAt: Date }) => ({
   id: item.id,
   title: item.title,
   description: item.description,
   category: item.category,
   createdAt: item.createdAt.toISOString()
+})
+
+const toBookingResponse = (booking: { id: number; resourceId: number; status: string; startsAt: Date; endsAt: Date; createdAt: Date }) => ({
+  id: booking.id,
+  resourceId: booking.resourceId,
+  status: booking.status as BookingStatus,
+  startsAt: booking.startsAt.toISOString(),
+  endsAt: booking.endsAt.toISOString(),
+  createdAt: booking.createdAt.toISOString()
 })
 
 const defaultCorsOrigins = ['http://localhost:4173', 'http://localhost:5173']
@@ -261,6 +403,79 @@ app.openapi(createItemRoute, async (c) => {
   return c.json(toItemResponse(item), 201)
 })
 
+app.openapi(listBookingsRoute, async (c) => {
+  const bookings = await prisma.booking.findMany({
+    orderBy: [
+      {
+        startsAt: 'asc'
+      },
+      {
+        createdAt: 'desc'
+      }
+    ]
+  })
+
+  return c.json({
+    bookings: bookings.map(toBookingResponse)
+  }, 200)
+})
+
+app.openapi(createBookingRoute, async (c) => {
+  const { resourceId, startsAt: startsAtInput, endsAt: endsAtInput, status = 'confirmed' } = c.req.valid('json')
+  const startsAt = new Date(startsAtInput)
+  const endsAt = new Date(endsAtInput)
+
+  if (endsAt <= startsAt) {
+    return c.json({
+      message: 'End time must be after start time.'
+    }, 400)
+  }
+
+  const resource = await prisma.item.findUnique({
+    where: {
+      id: resourceId
+    }
+  })
+
+  if (!resource) {
+    return c.json({
+      message: 'Resource not found.'
+    }, 404)
+  }
+
+  if (status === 'confirmed') {
+    const conflictingBooking = await prisma.booking.findFirst({
+      where: {
+        resourceId,
+        status: 'confirmed',
+        startsAt: {
+          lt: endsAt
+        },
+        endsAt: {
+          gt: startsAt
+        }
+      }
+    })
+
+    if (conflictingBooking) {
+      return c.json({
+        message: 'Booking conflicts with an existing confirmed booking.'
+      }, 409)
+    }
+  }
+
+  const booking = await prisma.booking.create({
+    data: {
+      resourceId,
+      status,
+      startsAt,
+      endsAt
+    }
+  })
+
+  return c.json(toBookingResponse(booking), 201)
+})
+
 app.openapi(updateItemRoute, async (c) => {
   const { id } = c.req.valid('param')
   const { title, description, category } = c.req.valid('json')
@@ -299,6 +514,33 @@ app.openapi(deleteItemRoute, async (c) => {
   })
 
   return c.body(null, 204)
+})
+
+app.openapi(cancelBookingRoute, async (c) => {
+  const { id } = c.req.valid('param')
+
+  const existingBooking = await prisma.booking.findUnique({
+    where: {
+      id
+    }
+  })
+
+  if (!existingBooking) {
+    return c.json({
+      message: 'Booking not found.'
+    }, 404)
+  }
+
+  const booking = await prisma.booking.update({
+    where: {
+      id
+    },
+    data: {
+      status: 'cancelled'
+    }
+  })
+
+  return c.json(toBookingResponse(booking), 200)
 })
 
 export type AppType = typeof app

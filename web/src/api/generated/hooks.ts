@@ -84,6 +84,42 @@ export interface CreateItem {
   category: string;
 }
 
+export type BookingStatus = typeof BookingStatus[keyof typeof BookingStatus];
+
+
+export const BookingStatus = {
+  draft: 'draft',
+  confirmed: 'confirmed',
+  cancelled: 'cancelled',
+  completed: 'completed',
+} as const;
+
+export interface Booking {
+  id: number;
+  /** @exclusiveMinimum 0 */
+  resourceId: number;
+  status: BookingStatus;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+}
+
+export interface BookingListResponse {
+  bookings: Booking[];
+}
+
+export interface ErrorResponse {
+  message: string;
+}
+
+export interface CreateBooking {
+  /** @exclusiveMinimum 0 */
+  resourceId: number;
+  status?: BookingStatus & unknown;
+  startsAt: string;
+  endsAt: string;
+}
+
 export interface UpdateItem {
   /**
      * @minLength 1
@@ -430,6 +466,151 @@ const {mutation: mutationOptions} = options ?
       return useMutation(getPostItemsMutationOptions(options), queryClient);
     }
 
+export const getBookings = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return customClient<BookingListResponse>(
+      {url: `/bookings`, method: 'GET', signal
+    },
+      );
+    }
+
+
+
+
+export const getGetBookingsQueryKey = () => {
+    return [
+    `/bookings`
+    ] as const;
+    }
+
+
+export const getGetBookingsQueryOptions = <TData = Awaited<ReturnType<typeof getBookings>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBookings>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBookingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBookings>>> = ({ signal }) => getBookings(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBookings>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetBookingsQueryResult = NonNullable<Awaited<ReturnType<typeof getBookings>>>
+export type GetBookingsQueryError = ErrorType<unknown>
+
+
+export function useGetBookings<TData = Awaited<ReturnType<typeof getBookings>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBookings>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBookings>>,
+          TError,
+          Awaited<ReturnType<typeof getBookings>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetBookings<TData = Awaited<ReturnType<typeof getBookings>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBookings>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBookings>>,
+          TError,
+          Awaited<ReturnType<typeof getBookings>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetBookings<TData = Awaited<ReturnType<typeof getBookings>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBookings>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetBookings<TData = Awaited<ReturnType<typeof getBookings>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBookings>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetBookingsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const postBookings = (
+    createBooking: CreateBooking,
+ signal?: AbortSignal
+) => {
+
+
+      return customClient<Booking>(
+      {url: `/bookings`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createBooking, signal
+    },
+      );
+    }
+
+
+
+export const getPostBookingsMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBookings>>, TError,{data: CreateBooking}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postBookings>>, TError,{data: CreateBooking}, TContext> => {
+
+const mutationKey = ['postBookings'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBookings>>, {data: CreateBooking}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postBookings(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBookingsMutationResult = NonNullable<Awaited<ReturnType<typeof postBookings>>>
+    export type PostBookingsMutationBody = CreateBooking
+    export type PostBookingsMutationError = ErrorType<ErrorResponse>
+
+    export const usePostBookings = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBookings>>, TError,{data: CreateBooking}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postBookings>>,
+        TError,
+        {data: CreateBooking},
+        TContext
+      > => {
+      return useMutation(getPostBookingsMutationOptions(options), queryClient);
+    }
+
 export const putItemsId = (
     id: number,
     updateItem: UpdateItem,
@@ -543,4 +724,60 @@ const {mutation: mutationOptions} = options ?
         TContext
       > => {
       return useMutation(getDeleteItemsIdMutationOptions(options), queryClient);
+    }
+
+export const postBookingsIdCancel = (
+    id: number,
+ signal?: AbortSignal
+) => {
+
+
+      return customClient<Booking>(
+      {url: `/bookings/${id}/cancel`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
+export const getPostBookingsIdCancelMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBookingsIdCancel>>, TError,{id: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postBookingsIdCancel>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['postBookingsIdCancel'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postBookingsIdCancel>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  postBookingsIdCancel(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostBookingsIdCancelMutationResult = NonNullable<Awaited<ReturnType<typeof postBookingsIdCancel>>>
+
+    export type PostBookingsIdCancelMutationError = ErrorType<ErrorResponse>
+
+    export const usePostBookingsIdCancel = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postBookingsIdCancel>>, TError,{id: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postBookingsIdCancel>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPostBookingsIdCancelMutationOptions(options), queryClient);
     }
