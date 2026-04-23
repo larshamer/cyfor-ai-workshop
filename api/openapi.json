@@ -192,6 +192,19 @@
         "tags": [
           "Items"
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "example": "projector"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "List persisted items",
